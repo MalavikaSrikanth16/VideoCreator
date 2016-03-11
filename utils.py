@@ -5,6 +5,8 @@ import argparse
 import os
 import sys
 import PIL
+import random
+import textwrap
 from PIL import ImageFont
 from PIL import Image
 from PIL import ImageDraw
@@ -18,7 +20,7 @@ class VideoCreator(object):
 
 	def get_arguments(self):
 		parser = argparse.ArgumentParser(description='Creates a short video.')
-		parser.add_argument('imageandtext', nargs='*', help="Path of images or text to display")
+		parser.add_argument('imageandtext', nargs='*', help="Path of images or text(within quotes) to display")
 		parser.add_argument('-o', '--output', required=False, default='output.avi', help="Output video file")
 		parser.add_argument('-oc', '--occasion', required=True, help="Occassion like Birthday, Anniversary, etc.")
 		parser.add_argument('--reverse-order', default=False, action="store_true", help="Images to be displayed in reverse order")
@@ -45,17 +47,22 @@ class VideoCreator(object):
 		font = ImageFont.truetype("orange_juice.ttf",75)
 		img=Image.new("RGBA", (width,height),(0,0,0))
 		draw = ImageDraw.Draw(img)
-		draw.text((width/4, height/3),"Happy",fill=(255,255,255),font=font)
-		draw.text((width/4 + 10, height/3+110),self.occasion,fill=(255,255,255),font=font)
+		self.occasion = "Happy " + self.occasion
+		self.occasion = textwrap.fill(self.occasion,10)
+		w,h = draw.textsize(self.occasion,font=font)
+		draw.text(((width-25-w)/2, (height-25-h)/2),self.occasion,fill=(255,255,255),font=font)
 		draw = ImageDraw.Draw(img)
 		img.save("first.png")
 		self.images[0] = "./first.png"
 
 		for i,image in enumerate(self.images):
 			if os.path.exists(image) == False:
+				font = ImageFont.truetype(random.choice(["orange_juice.ttf","font3.ttf","font5.ttf"]),75)
 				img=Image.new("RGBA", (width,height),(0,0,0))
 				draw = ImageDraw.Draw(img)
-				draw.text((10, 10),image,fill=(255,255,255),font=font)
+				image = textwrap.fill(image,17)
+				w,h = draw.textsize(image,font=font)
+				draw.text(((width-10-w)/2, (height-10-h)/2),image,fill=(255,255,255),font=font)
 				draw = ImageDraw.Draw(img)
 				img.save("text" + str(i) + ".png")
 				self.images[i] = "./text" + str(i) + ".png"
