@@ -44,6 +44,10 @@ class VideoCreator(object):
 				height, width, channels = frame.shape
 				break
 
+		width = width - 40
+		height = height - 40
+		x = 0
+
 		font = ImageFont.truetype("orange_juice.ttf",75)
 		img=Image.new("RGBA", (width,height),(0,0,0))
 		draw = ImageDraw.Draw(img)
@@ -60,7 +64,7 @@ class VideoCreator(object):
 				font = ImageFont.truetype(random.choice(["orange_juice.ttf","font3.ttf","font5.ttf"]),75)
 				img=Image.new("RGBA", (width,height),(0,0,0))
 				draw = ImageDraw.Draw(img)
-				image = textwrap.fill(image,17)
+				image = textwrap.fill(image,15)
 				w,h = draw.textsize(image,font=font)
 				draw.text(((width-10-w)/2, (height-10-h)/2),image,fill=(255,255,255),font=font)
 				draw = ImageDraw.Draw(img)
@@ -75,9 +79,13 @@ class VideoCreator(object):
 
 		for image in self.images:
 			frame = cv2.imread(image)
-			rframe = cv2.resize(frame,(width,height),interpolation = cv2.INTER_AREA)
+			rframe = cv2.resize(frame,(width-40,height-40),interpolation = cv2.INTER_AREA)
+			rframe = cv2.copyMakeBorder(rframe,20,20,20,20,cv2.BORDER_CONSTANT,value=[255,255,255])
+			M = cv2.getRotationMatrix2D((width/2,height/2),x,1)		
+			rframe = cv2.warpAffine(rframe,M,(width,height))
 			out.write(rframe) 
 			cv2.imshow('frame',frame)
+			x = random.choice([0,10,-10])
 			if cv2.waitKey(1) & 0xFF == ord('q'): 
 				break
 
