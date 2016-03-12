@@ -1,3 +1,8 @@
+decorator==4.0.9
+ez-setup==0.9
+imageio==1.5
+moviepy==0.2.2.11
 numpy==1.10.4
 Pillow==3.1.1
 setproctitle==1.1.9
+tqdm==3.8.0
