@@ -11,18 +11,19 @@ import textwrap
 import time
 import shutil
 from moviepy.editor import *
+from exceptions import FileNotFound
 from PIL import ImageFont
 from PIL import Image
 from PIL import ImageDraw
 
 class VideoCreator(object):
 	def __init__(self):
-		self.images = []
+		self.images = None
 		self.occasion = None
 		self.storage_path = "output.avi"
 		self.reverse_order = False
 		self.music = None
-		self.videos = []
+		self.videos = None
 		self.width = 0
 		self.height = 0
 		self.fps = 0
@@ -36,34 +37,57 @@ class VideoCreator(object):
 		parser.add_argument('-m','--music', help="Background music")
 		parser.add_argument('-v','--video', nargs='*', help="Path of video clips")
 		args = vars(parser.parse_args())
-		self.images = list(args['imgtxt'])
+		self.images = args['imgtxt']
 		self.occasion = args['occasion']
 		self.storage_path = args['output']
 		self.reverse_order = args['reverse_order']
 		self.music = args['music']
 		self.videos = args['video']
+		return (self.images, self.occasion, self.storage_path, self.reverse_order, self.music, self.videos, self.width, self.height, self.fps)
+
 
 	def get_wtht(self):
 		VIDEO_TYPES = ['.avi','.AVI','.wmv','.WMV','.mpg','.MPG','.mpeg','.MPEG','.mp4','.mov'] 
+		IMAGE_TYPES = ['.png','.gif','.jpg','.jpeg','.rgb','.tiff','.bmp','.rast','.ppm','.pgm','.pbm','.xbm']
+		status = 1
+		if len(self.images) > 0:
+			for image in self.images:
+				if os.path.splitext(image)[1] in IMAGE_TYPES:
+					if os.path.exists(image):
+						if status == 0:
+							continue
+						frame = cv2.imread(image)
+						self.height, self.width, channels = frame.shape
+						status = 0
+					else:
+						raise FileNotFound(1)
+			if status == 1:
+				self.height = 480
+				self.width = 640
+		else:
+			self.height = 480
+			self.width = 640
 
-		for image in self.images:
-			if os.path.exists(image):
-				frame = cv2.imread(image)
-				self.height, self.width, channels = frame.shape
-				break
-		for video in self.videos:
-			cap = cv2.VideoCapture(video)
-			self.fps = cap.get(cv2.CAP_PROP_FPS)
-			cap.release()
-			break
+		status = 1
+		if self.videos != None:
+			self.videos = list(self.videos)
+			for video in self.videos:
+				if os.path.exists(video) and os.path.splitext(video)[1] in VIDEO_TYPES:
+					if status == 0:
+						continue
+					cap = cv2.VideoCapture(video)
+					self.fps = cap.get(cv2.CAP_PROP_FPS)
+					cap.release()
+					status = 0
+				else:
+					raise FileNotFound(2)
+		else:
+			self.fps = 10.0
 						
 
 	def create_video(self):
 		# Determine the width and height from the first image
-		if self.images == []:
-			print("Input image paths or text to create video")
-			sys.exit()
-
+		
 		self.images.insert(0, "")
 
 		width = self.width - 40
@@ -99,8 +123,9 @@ class VideoCreator(object):
 		fourcc = cv2.VideoWriter_fourcc(*'MJPG') 
 		out = cv2.VideoWriter('./Nonsense/final.avi', fourcc, self.fps, (self.width, self.height),True)
 
-		if self.reverse_order == True:
-			self.images[1:] = list(reversed(self.images[1:]))
+		if len(self.images) > 1:
+			if self.reverse_order == True:
+				self.images[1:] = list(reversed(self.images[1:]))
 
 		for image in self.images:
 			count = 10
@@ -119,6 +144,21 @@ class VideoCreator(object):
 		out.release()
 		cv2.destroyAllWindows()
 		new = []
+
+		if self.videos == None:
+			if self.music != None:
+				time = VideoFileClip('./Nonsense/final.avi').duration
+				audio = AudioFileClip(self.music).subclip(0,time)
+				video = VideoFileClip('./Nonsense/final.avi').set_audio(audio)
+			else:
+				video = VideoFileClip('./Nonsense/final.avi')
+			video.write_videofile(self.storage_path,fps=self.fps,codec='mpeg4')
+			print("The output video is {}".format(self.storage_path))
+			return
+
+		if self.reverse_order == True:
+			self.videos = list(reversed(self.videos))
+
 		for i,video in enumerate(self.videos):
 			clip = VideoFileClip(video)
 			audio = clip.audio
@@ -142,7 +182,13 @@ class VideoCreator(object):
 			outp.release()
 			new.append(VideoFileClip('./Nonsense/temp' + str(i)  + '.avi').set_audio(audio))
 
-		existing = VideoFileClip('./Nonsense/final.avi')
+		if self.music != None:
+			time = VideoFileClip('./Nonsense/final.avi').duration
+			audio = AudioFileClip(self.music).subclip(0,time)
+			existing = VideoFileClip('./Nonsense/final.avi').set_audio(audio)
+		else:
+			existing = VideoFileClip('./Nonsense/final.avi')
+			
 		new.insert(0,existing)
 		video = concatenate(new)
 		video.write_videofile(self.storage_path,fps=self.fps,codec='mpeg4')
