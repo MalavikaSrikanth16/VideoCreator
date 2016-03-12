@@ -7,6 +7,7 @@ def console_main():
     setproctitle('Video-Creator')
     video = VideoCreator()
     video.get_arguments()
+    video.get_wtht()
     video.create_video()
     return
 
