@@ -12,6 +12,7 @@ import time
 import shutil
 from moviepy.editor import *
 from exceptions import FileNotFound
+from transition import mytool
 from PIL import ImageFont
 from PIL import Image
 from PIL import ImageDraw
@@ -86,7 +87,6 @@ class VideoCreator(object):
 						
 
 	def create_video(self):
-		# Determine the width and height from the first image
 		
 		self.images.insert(0, "")
 
@@ -119,30 +119,31 @@ class VideoCreator(object):
 				draw = ImageDraw.Draw(img)
 				img.save("./Nonsense/text" + str(i) + ".png")
 				self.images[i] = "./Nonsense/text" + str(i) + ".png"
-		
-		fourcc = cv2.VideoWriter_fourcc(*'MJPG') 
-		out = cv2.VideoWriter('./Nonsense/final.avi', fourcc, self.fps, (self.width, self.height),True)
 
 		if len(self.images) > 1:
 			if self.reverse_order == True:
 				self.images[1:] = list(reversed(self.images[1:]))
 
+		m = mytool()
+		vid = []
+		count = 0
 		for image in self.images:
-			count = 10
-			while count!=0:
-				frame = cv2.imread(image)
-				rframe = cv2.resize(frame,(width,height),interpolation = cv2.INTER_AREA)
-				rframe = cv2.copyMakeBorder(rframe,20,20,20,20,cv2.BORDER_CONSTANT,value=[255,255,255])
-				M = cv2.getRotationMatrix2D((self.width/2,self.height/2),x,1)		
-				rframe = cv2.warpAffine(rframe,M,(self.width,self.height))
-				out.write(rframe)
-				count = count - 1 
+			frame = cv2.imread(image)
+			rframe = cv2.resize(frame,(width,height),interpolation = cv2.INTER_AREA)
+			rframe = cv2.copyMakeBorder(rframe,20,20,20,20,cv2.BORDER_CONSTANT,value=[255,255,255])
+			M = cv2.getRotationMatrix2D((self.width/2,self.height/2),x,1)		
+			rframe = cv2.warpAffine(rframe,M,(self.width,self.height))
+			cv2.imwrite('./Nonsense/new.png',rframe)
+			m.add_fade_effect('./Nonsense/new.png',0)
+			vid.append(VideoFileClip('./Nonsense/final'+str(count)+'.mp4'))
+			count = count + 1 
 			x = random.choice([0,10,-10])
 			if cv2.waitKey(1) & 0xFF == ord('q'): 
 				break
 
-		out.release()
-		cv2.destroyAllWindows()
+		imgvid = concatenate(vid)
+		imgvid.write_videofile('./Nonsense/final.avi',fps=self.fps,codec='mpeg4')
+
 		new = []
 
 		if self.videos == None:
@@ -166,6 +167,7 @@ class VideoCreator(object):
 			fps = cap.get(cv2.CAP_PROP_FPS)
 			fourcc = cv2.VideoWriter_fourcc(*'MJPG') 
 			outp = cv2.VideoWriter("./Nonsense/temp" + str(i) + ".avi", fourcc, fps, (self.width, self.height),True)
+			status =  0
 			while(cap.isOpened()):
 				ret, frame = cap.read()
 				if ret == True:
@@ -173,14 +175,29 @@ class VideoCreator(object):
 					rframe = cv2.copyMakeBorder(rframe,20,20,20,20,cv2.BORDER_CONSTANT,value=[255,255,255])
 					M = cv2.getRotationMatrix2D((self.width/2,self.height/2),x,1)		
 					rframe = cv2.warpAffine(rframe,M,(self.width,self.height))
+					if status == 0:
+						firstframe = rframe
+						cv2.imwrite('./Nonsense/first.png',firstframe)
+						m.add_fade_effect('./Nonsense/first.png',1)
+						new.append(VideoFileClip('./Nonsense/final'+str(count)+'.mp4'))
+						count = count + 1
+						status = 1
 					outp.write(rframe)
 					if cv2.waitKey(1) & 0xFF == ord('q'):
 						break
 				else:
 					break
+			
 			cap.release()
 			outp.release()
+
 			new.append(VideoFileClip('./Nonsense/temp' + str(i)  + '.avi').set_audio(audio))
+
+			lastframe = rframe
+			cv2.imwrite('./Nonsense/last.png',lastframe)
+			m.add_fade_effect('./Nonsense/last.png',2)
+			new.append(VideoFileClip('./Nonsense/final'+str(count)+'.mp4'))
+			count = count + 1
 
 		if self.music != None:
 			time = VideoFileClip('./Nonsense/final.avi').duration
