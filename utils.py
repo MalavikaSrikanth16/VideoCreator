@@ -16,9 +16,11 @@ from transition import mytool
 from PIL import ImageFont
 from PIL import Image
 from PIL import ImageDraw
+import re
 
 class VideoCreator(object):
-	def __init__(self):
+
+	def __init__(self):	
 		self.images = None
 		self.occasion = None
 		self.storage_path = "output.avi"
@@ -32,7 +34,7 @@ class VideoCreator(object):
 	def get_arguments(self):
 		parser = argparse.ArgumentParser(description='Creates a short video.')
 		parser.add_argument('imgtxt', nargs='*', help="Path of images or text(within quotes) to display")
-		parser.add_argument('-o', '--output', required=False, default='output.avi', help="Output video file")
+		parser.add_argument('-o', '--output', required=False, default='output', help="Output video file name")
 		parser.add_argument('-oc', '--occasion', required=True, help="Occassion like Birthday, Anniversary, etc.")
 		parser.add_argument('--reverse-order', default=False, action="store_true", help="Images to be displayed in reverse order")
 		parser.add_argument('-m','--music', help="Background music")
@@ -43,6 +45,11 @@ class VideoCreator(object):
 		self.storage_path = args['output']
 		self.reverse_order = args['reverse_order']
 		self.music = args['music']
+		#Converts to a valid file name
+		s = args['output']
+		s = s.replace(' ', '_')
+		s = re.sub(r'(?u)[^-\w]', '', s)
+		self.storage_path = s + '.avi'
 		self.videos = args['video']
 		return (self.images, self.occasion, self.storage_path, self.reverse_order, self.music, self.videos, self.width, self.height, self.fps)
 
@@ -150,7 +157,8 @@ class VideoCreator(object):
 			if self.music != None:
 				time = VideoFileClip('./Nonsense/final.avi').duration
 				audio = AudioFileClip(self.music).subclip(0,time)
-				video = VideoFileClip('./Nonsense/final.avi').set_audio(audio)
+				audiof = audio.audio_fadeout(5)
+				video = VideoFileClip('./Nonsense/final.avi').set_audio(audiof)
 			else:
 				video = VideoFileClip('./Nonsense/final.avi')
 			video.write_videofile(self.storage_path,fps=self.fps,codec='mpeg4')
@@ -183,7 +191,7 @@ class VideoCreator(object):
 						count = count + 1
 						status = 1
 					outp.write(rframe)
-					if cv2.waitKey(1) & 0xFF == ord('q'):
+					if cv2.waitKey(1) == ord('q'):
 						break
 				else:
 					break
@@ -202,7 +210,8 @@ class VideoCreator(object):
 		if self.music != None:
 			time = VideoFileClip('./Nonsense/final.avi').duration
 			audio = AudioFileClip(self.music).subclip(0,time)
-			existing = VideoFileClip('./Nonsense/final.avi').set_audio(audio)
+			audiof = audio.audio_fadeout(5)
+			existing = VideoFileClip('./Nonsense/final.avi').set_audio(audiof)
 		else:
 			existing = VideoFileClip('./Nonsense/final.avi')
 			

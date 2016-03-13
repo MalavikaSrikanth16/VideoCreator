@@ -3,11 +3,15 @@
 from utils import VideoCreator
 from setproctitle import setproctitle
 import sys
+from subprocess import call
 from exceptions import FileNotFound
-
 
 def console_main():
     setproctitle('Video-Creator')
+    #sys.stdout = open('out.log','w')
+    #sys.stderr = open('err.log','w')
+
+    #call(['.','-o','images','-oc','-v','-m','--reverse-order'], stdout = f, stderr = f1)
     video = VideoCreator()
     video.get_arguments()
 
