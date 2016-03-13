@@ -57,6 +57,7 @@ class VideoCreator(object):
 	def get_wtht(self):
 		VIDEO_TYPES = ['.avi','.AVI','.wmv','.WMV','.mpg','.MPG','.mpeg','.MPEG','.mp4','.mov'] 
 		IMAGE_TYPES = ['.png','.gif','.jpg','.jpeg','.rgb','.tiff','.bmp','.rast','.ppm','.pgm','.pbm','.xbm']
+		AUDIO_TYPES = ['.mp3','.MP3','.mpa','.MPA','.flac','.FLAC','.ogg','.OGG','.wav','.WAV','.wma','.WMA']
 		status = 1
 		if len(self.images) > 0:
 			for image in self.images:
@@ -76,24 +77,30 @@ class VideoCreator(object):
 			self.height = 480
 			self.width = 640
 
-		status = 1
+		min = sys.float_info.max
 		if self.videos != None:
 			self.videos = list(self.videos)
 			for video in self.videos:
 				if os.path.exists(video) and os.path.splitext(video)[1] in VIDEO_TYPES:
-					if status == 0:
-						continue
 					cap = cv2.VideoCapture(video)
-					self.fps = cap.get(cv2.CAP_PROP_FPS)
+					fps = cap.get(cv2.CAP_PROP_FPS)
+					if fps < min:
+						min = fps
 					cap.release()
-					status = 0
 				else:
 					raise FileNotFound(2)
+			self.fps = min
 		else:
 			self.fps = 10.0
-						
+
+		if self.music != None:
+			if os.path.exists(self.music) and os.path.splitext(self.music)[1] in AUDIO_TYPES:
+				return
+			else:
+				raise FileNotFound(3)					
 
 	def create_video(self):
+		
 		
 		self.images.insert(0, "")
 
@@ -158,11 +165,11 @@ class VideoCreator(object):
 				time = VideoFileClip('./Nonsense/final.avi').duration
 				audio = AudioFileClip(self.music)
 				t = audio.duration
-				while t < time:
-					audio = audio.audio_loop()
-					t = audio.duration
-				finalaudio = audio.subclip(0,time)
-				finalaudiof = audio.audio_fadeout(5)
+				if t < time:
+					finalaudio = afx.audio_loop(audio, duration=time)
+				else:
+					finalaudio = audio.subclip(0,time)
+				finalaudiof = finalaudio.audio_fadeout(5)
 				video = VideoFileClip('./Nonsense/final.avi').set_audio(finalaudiof)
 			else:
 				video = VideoFileClip('./Nonsense/final.avi')
@@ -216,11 +223,11 @@ class VideoCreator(object):
 			time = VideoFileClip('./Nonsense/final.avi').duration
 			audio = AudioFileClip(self.music)
 			t = audio.duration
-			while t < time:
-				audio = audio.audio_loop()
-				t = audio.duration
-			finalaudio = audio.subclip(0,time)
-			finalaudiof = audio.audio_fadeout(5)
+			if t < time:
+				finalaudio = afx.audio_loop(audio, duration=time)
+			else:
+				finalaudio = audio.subclip(0,time)
+			finalaudiof = finalaudio.audio_fadeout(5)
 			existing = VideoFileClip('./Nonsense/final.avi').set_audio(finalaudiof)
 		else:
 			existing = VideoFileClip('./Nonsense/final.avi')

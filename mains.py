@@ -3,7 +3,6 @@
 from utils import VideoCreator
 from setproctitle import setproctitle
 import sys
-from subprocess import call
 from exceptions import FileNotFound
 
 def console_main():
@@ -11,7 +10,6 @@ def console_main():
     #sys.stdout = open('out.log','w')
     #sys.stderr = open('err.log','w')
 
-    #call(['.','-o','images','-oc','-v','-m','--reverse-order'], stdout = f, stderr = f1)
     video = VideoCreator()
     video.get_arguments()
 
@@ -25,7 +23,9 @@ def console_main():
         if err.status_code == 1:
             print("Invalid image path")
         elif err.status_code == 2:
-            print("invalid video path")
+            print("Invalid video path")
+        elif err.status_code == 3:
+            print("Invalid audio path")
         sys.exit()
 
     video.create_video()
