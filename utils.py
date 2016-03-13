@@ -156,9 +156,14 @@ class VideoCreator(object):
 		if self.videos == None:
 			if self.music != None:
 				time = VideoFileClip('./Nonsense/final.avi').duration
-				audio = AudioFileClip(self.music).subclip(0,time)
-				audiof = audio.audio_fadeout(5)
-				video = VideoFileClip('./Nonsense/final.avi').set_audio(audiof)
+				audio = AudioFileClip(self.music)
+				t = audio.duration
+				while t < time:
+					audio = audio.audio_loop()
+					t = audio.duration
+				finalaudio = audio.subclip(0,time)
+				finalaudiof = audio.audio_fadeout(5)
+				video = VideoFileClip('./Nonsense/final.avi').set_audio(finalaudiof)
 			else:
 				video = VideoFileClip('./Nonsense/final.avi')
 			video.write_videofile(self.storage_path,fps=self.fps,codec='mpeg4')
@@ -209,9 +214,14 @@ class VideoCreator(object):
 
 		if self.music != None:
 			time = VideoFileClip('./Nonsense/final.avi').duration
-			audio = AudioFileClip(self.music).subclip(0,time)
-			audiof = audio.audio_fadeout(5)
-			existing = VideoFileClip('./Nonsense/final.avi').set_audio(audiof)
+			audio = AudioFileClip(self.music)
+			t = audio.duration
+			while t < time:
+				audio = audio.audio_loop()
+				t = audio.duration
+			finalaudio = audio.subclip(0,time)
+			finalaudiof = audio.audio_fadeout(5)
+			existing = VideoFileClip('./Nonsense/final.avi').set_audio(finalaudiof)
 		else:
 			existing = VideoFileClip('./Nonsense/final.avi')
 			
