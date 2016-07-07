@@ -12,7 +12,6 @@ import time
 import shutil
 from moviepy.editor import *
 from exceptions import FileNotFound
-from transition import mytool
 from PIL import ImageFont
 from PIL import Image
 from PIL import ImageDraw
@@ -33,11 +32,11 @@ class VideoCreator(object):
 
 	def get_arguments(self):
 		parser = argparse.ArgumentParser(description='Creates a short video.')
-		parser.add_argument('imgtxt', nargs='*', help="Path of images or text(within quotes) to display")
+		parser.add_argument('imgtxt', nargs='*', help="Path of images or text to display (Text must be within double quotes)")
 		parser.add_argument('-o', '--output', required=False, default='output', help="Output video file name")
 		parser.add_argument('-oc', '--occasion', required=True, help="Occassion like Birthday, Anniversary, etc.")
-		parser.add_argument('--reverse-order', default=False, action="store_true", help="Images to be displayed in reverse order")
-		parser.add_argument('-m','--music', help="Background music")
+		parser.add_argument('--reverse-order', default=False, action="store_true", help="Images and Videos to be displayed in reverse order")
+		parser.add_argument('-m','--music', help="Path of audio clip to be played when images are displayed")
 		parser.add_argument('-v','--video', nargs='*', help="Path of video clips")
 		args = vars(parser.parse_args())
 		self.images = args['imgtxt']
@@ -58,40 +57,33 @@ class VideoCreator(object):
 		VIDEO_TYPES = ['.avi','.AVI','.wmv','.WMV','.mpg','.MPG','.mpeg','.MPEG','.mp4','.mov'] 
 		IMAGE_TYPES = ['.png','.gif','.jpg','.jpeg','.rgb','.tiff','.bmp','.rast','.ppm','.pgm','.pbm','.xbm']
 		AUDIO_TYPES = ['.mp3','.MP3','.mpa','.MPA','.flac','.FLAC','.ogg','.OGG','.wav','.WAV','.wma','.WMA']
-		status = 1
-		if len(self.images) > 0:
-			for image in self.images:
-				if os.path.splitext(image)[1] in IMAGE_TYPES:
-					if os.path.exists(image):
-						if status == 0:
-							continue
-						frame = cv2.imread(image)
-						self.height, self.width, channels = frame.shape
-						status = 0
-					else:
-						raise FileNotFound(1)
-			if status == 1:
-				self.height = 480
-				self.width = 640
-		else:
-			self.height = 480
-			self.width = 640
 
-		min = sys.float_info.max
+		for image in self.images: 
+			if os.path.splitext(image)[1] in IMAGE_TYPES:  #If it ends with .png,.jpeg,etc. check if valid path or not.
+				if os.path.exists(image):
+					continue
+				else:
+					raise FileNotFound(1)
+			elif os.path.exists(image):              #If it doesn't end with .png,.jpeg,etc. but path exists raise error as it is not an expected image path or plain text               
+				raise FileNotFound(1)
+
+		self.height = 480
+		self.width = 640
+
+		tot = 0
 		if self.videos != None:
 			self.videos = list(self.videos)
 			for video in self.videos:
 				if os.path.exists(video) and os.path.splitext(video)[1] in VIDEO_TYPES:
 					cap = cv2.VideoCapture(video)
 					fps = cap.get(cv2.CAP_PROP_FPS)
-					if fps < min:
-						min = fps
+					tot = tot + fps
 					cap.release()
 				else:
 					raise FileNotFound(2)
-			self.fps = min
+			self.fps = tot / len(self.videos)  #fps of output video is taken to be average of fps of individual video inputs.
 		else:
-			self.fps = 10.0
+			self.fps = 10.0     #If no video inputs then fps of output video is taken as 10.
 
 		if self.music != None:
 			if os.path.exists(self.music) and os.path.splitext(self.music)[1] in AUDIO_TYPES:
@@ -111,7 +103,7 @@ class VideoCreator(object):
 		if not os.path.exists('./Nonsense'):
 			os.makedirs('./Nonsense')
 
-		font = ImageFont.truetype("orange_juice.ttf",75)
+		font = ImageFont.truetype("orange_juice.ttf",60)
 		img=Image.new("RGBA", (width,height),(0,0,0))
 		draw = ImageDraw.Draw(img)
 		self.occasion = "Happy " + self.occasion
@@ -124,7 +116,7 @@ class VideoCreator(object):
 
 		for i,image in enumerate(self.images):
 			if os.path.exists(image) == False:
-				font = ImageFont.truetype(random.choice(["orange_juice.ttf","font3.ttf","font5.ttf"]),75)
+				font = ImageFont.truetype(random.choice(["orange_juice.ttf","font3.ttf","font5.ttf"]),60)
 				img=Image.new("RGBA", (width,height),(0,0,0))
 				draw = ImageDraw.Draw(img)
 				image = textwrap.fill(image,15)
@@ -138,9 +130,7 @@ class VideoCreator(object):
 			if self.reverse_order == True:
 				self.images[1:] = list(reversed(self.images[1:]))
 
-		m = mytool()
 		vid = []
-		count = 0
 		for image in self.images:
 			frame = cv2.imread(image)
 			rframe = cv2.resize(frame,(width,height),interpolation = cv2.INTER_AREA)
@@ -148,11 +138,9 @@ class VideoCreator(object):
 			M = cv2.getRotationMatrix2D((self.width/2,self.height/2),x,1)		
 			rframe = cv2.warpAffine(rframe,M,(self.width,self.height))
 			cv2.imwrite('./Nonsense/new.png',rframe)
-			m.add_fade_effect('./Nonsense/new.png',0)
-			vid.append(VideoFileClip('./Nonsense/final'+str(count)+'.mp4'))
-			count = count + 1 
+			vid.append(ImageClip('./Nonsense/new.png').set_duration(5).fadein(0.5).fadeout(0.5))
 			x = random.choice([0,10,-10])
-			if cv2.waitKey(1) & 0xFF == ord('q'): 
+			if cv2.waitKey(1) == ord('q'): 
 				break
 
 		imgvid = concatenate(vid)
@@ -160,20 +148,21 @@ class VideoCreator(object):
 
 		new = []
 
-		if self.videos == None:
-			if self.music != None:
-				time = VideoFileClip('./Nonsense/final.avi').duration
-				audio = AudioFileClip(self.music)
-				t = audio.duration
-				if t < time:
-					finalaudio = afx.audio_loop(audio, duration=time)
-				else:
-					finalaudio = audio.subclip(0,time)
-				finalaudiof = finalaudio.audio_fadeout(5)
-				video = VideoFileClip('./Nonsense/final.avi').set_audio(finalaudiof)
+		if self.music != None:
+			time = VideoFileClip('./Nonsense/final.avi').duration
+			audio = AudioFileClip(self.music)
+			t = audio.duration
+			if t < time:
+				finalaudio = afx.audio_loop(audio, duration=time)
 			else:
-				video = VideoFileClip('./Nonsense/final.avi')
-			video.write_videofile(self.storage_path,fps=self.fps,codec='mpeg4')
+				finalaudio = audio.subclip(0,time)
+			finalaudiof = finalaudio.audio_fadeout(5)
+			existing = VideoFileClip('./Nonsense/final.avi').set_audio(finalaudiof)
+		else:
+			existing = VideoFileClip('./Nonsense/final.avi')
+
+		if self.videos == None:
+			existing.write_videofile(self.storage_path,fps=self.fps,codec='mpeg4')
 			print("The output video is {}".format(self.storage_path))
 			return
 
@@ -198,9 +187,7 @@ class VideoCreator(object):
 					if status == 0:
 						firstframe = rframe
 						cv2.imwrite('./Nonsense/first.png',firstframe)
-						m.add_fade_effect('./Nonsense/first.png',1)
-						new.append(VideoFileClip('./Nonsense/final'+str(count)+'.mp4'))
-						count = count + 1
+						new.append(ImageClip('./Nonsense/first.png').set_duration(0.2).fadein(1))
 						status = 1
 					outp.write(rframe)
 					if cv2.waitKey(1) == ord('q'):
@@ -215,22 +202,7 @@ class VideoCreator(object):
 
 			lastframe = rframe
 			cv2.imwrite('./Nonsense/last.png',lastframe)
-			m.add_fade_effect('./Nonsense/last.png',2)
-			new.append(VideoFileClip('./Nonsense/final'+str(count)+'.mp4'))
-			count = count + 1
-
-		if self.music != None:
-			time = VideoFileClip('./Nonsense/final.avi').duration
-			audio = AudioFileClip(self.music)
-			t = audio.duration
-			if t < time:
-				finalaudio = afx.audio_loop(audio, duration=time)
-			else:
-				finalaudio = audio.subclip(0,time)
-			finalaudiof = finalaudio.audio_fadeout(5)
-			existing = VideoFileClip('./Nonsense/final.avi').set_audio(finalaudiof)
-		else:
-			existing = VideoFileClip('./Nonsense/final.avi')
+			new.append(ImageClip('./Nonsense/last.png').set_duration(0.2).fadeout(1))
 			
 		new.insert(0,existing)
 		video = concatenate(new)
